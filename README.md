@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Smart Ride — Monthly Pickup & Drop Subscription Platform
 
 A subscription-based commuting platform: fixed pickup/drop route, the **same driver and vehicle every day**, and predictable monthly/quarterly/yearly pricing — instead of on-demand, surge-priced cab booking.
@@ -166,3 +167,7 @@ Matching rules:
 Payment verification uses the same route-aware selection when it activates a subscription. If no suitable verified driver is available, the subscription activates without a driver and the customer is notified that assignment is pending.
 
 **Important limitation:** this is route-overlap matching, not live road-network optimization. The current Driver model does not store driver start coordinates, shift hours, seat capacity, or vehicle GPS. For production-grade routing, add those fields and integrate a routing service (for example, OSRM/Google Maps) and driver availability/live-location data. Coordinates are optional; when they are missing, the algorithm uses same-city eligibility, matching route labels, time, and workload.
+=======
+# smart-ride
+Smart Ride is a full-stack web-based ride management platform designed to provide a simple, secure, and efficient solution for managing ride services. The platform connects passengers, drivers, and administrators through dedicated features and dashboards, making the complete ride management process easier to handle from a single application.
+>>>>>>> 7a1015e1b2db3dad6652c43cd506ac178ad9e5d2
