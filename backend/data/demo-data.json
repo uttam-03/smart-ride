@@ -1,0 +1,69 @@
+{
+  "_note": "Sample reference data for Smart Ride. The current Sequelize/SQLite app automatically creates its database and seeds the admin, plans, and settings on first startup. This JSON file is not automatically imported.",
+  "admins": [
+    {
+      "id": "admin-demo-001",
+      "name": "System Admin",
+      "email": "admin@smartride.com",
+      "password": "SET_BY_APP_SEED_ON_FIRST_STARTUP",
+      "role": "admin",
+      "createdAt": "2026-10-17T00:00:00.000Z"
+    }
+  ],
+  "plans": [
+    {
+      "id": "plan-monthly",
+      "name": "Monthly Plan",
+      "durationDays": 30,
+      "price": 2500,
+      "description": "Fixed daily pickup and drop for 30 days."
+    },
+    {
+      "id": "plan-quarterly",
+      "name": "Quarterly Plan",
+      "durationDays": 90,
+      "price": 7000,
+      "description": "Three months of daily commuting."
+    },
+    {
+      "id": "plan-yearly",
+      "name": "Yearly Plan",
+      "durationDays": 365,
+      "price": 25000,
+      "description": "A full year of daily commuting."
+    }
+  ],
+  "sampleRegistration": {
+    "commuter": {
+      "name": "Demo Commuter",
+      "email": "commuter@example.com",
+      "phone": "9000000001",
+      "role": "user",
+      "city": "Bareilly",
+      "pickupAddress": "Civil Lines, Bareilly",
+      "dropAddress": "University Road, Bareilly"
+    },
+    "driver": {
+      "name": "Demo Driver",
+      "email": "driver@example.com",
+      "phone": "9000000002",
+      "role": "driver",
+      "city": "Bareilly",
+      "vehicleType": "Hatchback",
+      "vehicleNumber": "UP25DEMO01",
+      "licenseNumber": "DEMO-LICENSE-001",
+      "verified": false
+    }
+  },
+  "sampleTrackingLocation": {
+    "latitude": 28.367,
+    "longitude": 79.4304,
+    "accuracy": 25,
+    "locationUpdatedAt": "2026-10-17T00:00:00.000Z",
+    "note": "Illustrative Bareilly coordinates only; use real browser GPS for actual tracking."
+  },
+  "settings": {
+    "upiId": "",
+    "payeeName": "Smart Ride"
+  }
+}

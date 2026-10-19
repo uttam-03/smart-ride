@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sign Up — Smart Ride</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h2>Create your account</h2>
+      <div class="role-toggle">
+        <button type="button" class="active" id="roleUserBtn" onclick="setRole('user')">I'm a Commuter</button>
+        <button type="button" id="roleDriverBtn" onclick="setRole('driver')">I'm a Driver</button>
+      </div>
+      <div id="alert" class="alert hidden"></div>
+      <form id="regForm">
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" required placeholder="Full name" />
+        </div>
+        <div class="grid grid-2" style="gap:16px;">
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" required placeholder="you@example.com" />
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone</label>
+            <input type="tel" id="phone" required placeholder="10-digit number" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" required minlength="6" placeholder="At least 6 characters" />
+        </div>
+        <div class="form-group">
+          <label for="regCity">City</label>
+          <input type="text" id="regCity" required placeholder="e.g. Moradabad" />
+        </div>
+
+        <div id="userFields">
+          <div class="grid grid-2" style="gap:16px;">
+            <div class="form-group">
+              <label for="pickup">Pickup Location</label>
+              <input type="text" id="pickup" placeholder="e.g. Sector 12, Moradabad" />
+            </div>
+            <div class="form-group">
+              <label for="drop">Drop Location</label>
+              <input type="text" id="drop" placeholder="e.g. Tech Park, Moradabad" />
+            </div>
+          </div>
+        </div>
+
+        <div id="driverFields" class="hidden">
+          <div class="grid grid-2" style="gap:16px;">
+            <div class="form-group">
+              <label for="vehicleType">Vehicle Type</label>
+              <select id="vehicleType">
+                <option value="Hatchback">Hatchback</option>
+                <option value="Sedan">Sedan</option>
+                <option value="SUV">SUV</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="vehicleNumber">Vehicle Number</label>
+              <input type="text" id="vehicleNumber" placeholder="e.g. UP21 AB 1234" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="licenseNumber">Driving License Number</label>
+            <input type="text" id="licenseNumber" placeholder="License number" />
+          </div>
+          <div class="alert alert-info">New driver accounts require admin verification before receiving rider assignments.</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="regBtn">Create Account</button>
+      </form>
+      <div class="auth-footer">Already have an account? <a href="login.html">Login here</a></div>
+    </div>
+  </div>
+  <script src="js/api.js"></script>
+  <script>
+    renderNavbar(null);
+    let selectedRole = 'user';
+
+    function setRole(role) {
+      selectedRole = role;
+      document.getElementById('roleUserBtn').classList.toggle('active', role === 'user');
+      document.getElementById('roleDriverBtn').classList.toggle('active', role === 'driver');
+      document.getElementById('userFields').classList.toggle('hidden', role !== 'user');
+      document.getElementById('driverFields').classList.toggle('hidden', role !== 'driver');
+    }
+
+    document.getElementById('regForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert('alert');
+      const btn = document.getElementById('regBtn');
+      btn.disabled = true; btn.textContent = 'Creating account...';
+
+      const payload = {
+        role: selectedRole,
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        password: document.getElementById('password').value,
+        city: document.getElementById('regCity').value.trim(),
+      };
+      if (selectedRole === 'user') {
+        payload.pickup = document.getElementById('pickup').value.trim();
+        payload.drop = document.getElementById('drop').value.trim();
+      } else {
+        payload.vehicleType = document.getElementById('vehicleType').value;
+        payload.vehicleNumber = document.getElementById('vehicleNumber').value.trim();
+        payload.licenseNumber = document.getElementById('licenseNumber').value.trim();
+      }
+
+      try {
+        const data = await apiRequest('/auth/register', { method: 'POST', body: payload, auth: false });
+        setSession(data.token, data.account);
+        const dash = selectedRole === 'user' ? 'user-dashboard.html' : 'driver-dashboard.html';
+        window.location.href = dash;
+      } catch (err) {
+        showAlert('alert', err.message);
+        btn.disabled = false; btn.textContent = 'Create Account';
+      }
+    });
+  </script>
+  <script src="js/theme-motion.js"></script>
+</body>
+</html>

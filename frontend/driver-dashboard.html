@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Driver Dashboard — Smart Ride</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+  <div class="container">
+    <h1 class="page-title">Driver Dashboard</h1>
+    <p class="page-sub" id="verifyNote"></p>
+    <div class="grid grid-4" id="earningsCards" style="margin-bottom:26px;"></div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="riders">My Riders</button>
+      <button class="tab-btn" data-tab="attendance">Attendance Log</button>
+      <button class="tab-btn" data-tab="reviews">Reviews</button>
+      <button class="tab-btn" data-tab="notifications">Notifications</button>
+      <button class="tab-btn" data-tab="support">Support</button>
+      <button class="tab-btn" data-tab="profile">Profile</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-riders"><div id="ridersList" class="grid grid-2"></div></div>
+
+    <div class="tab-panel" id="tab-attendance">
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Status</th><th>Note</th><th>Logged At</th></tr></thead><tbody id="attendanceBody"></tbody></table></div>
+    </div>
+
+    <div class="tab-panel" id="tab-reviews"><div class="card"><div id="reviewsList"></div></div></div>
+    <div class="tab-panel" id="tab-notifications"><div class="card"><div id="notifList"></div></div></div>
+
+    <div class="tab-panel" id="tab-support">
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>Raise a Complaint / Feedback</h3>
+          <div id="cmpAlert" class="alert hidden"></div>
+          <div class="form-group"><label for="cmpSubject">Subject</label><input type="text" id="cmpSubject" /></div>
+          <div class="form-group"><label for="cmpMessage">Message</label><textarea id="cmpMessage"></textarea></div>
+          <button class="btn btn-primary" id="cmpBtn">Submit</button>
+        </div>
+        <div class="card"><h3>My Complaints</h3><div id="cmpList"></div></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-profile">
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>My Profile</h3>
+          <div id="profileAlert" class="alert hidden"></div>
+          <div class="form-group"><label for="profName">Full Name</label><input type="text" id="profName" /></div>
+          <div class="form-group"><label for="profPhone">Phone</label><input type="text" id="profPhone" /></div>
+          <div class="form-group"><label for="profCity">City</label><input type="text" id="profCity" /></div>
+          <div class="form-group"><label for="profVehicleType">Vehicle Type</label><select id="profVehicleType"><option value="Hatchback">Hatchback</option><option value="Sedan">Sedan</option><option value="SUV">SUV</option></select></div>
+          <div class="form-group"><label for="profVehicleNumber">Vehicle Number</label><input type="text" id="profVehicleNumber" /></div>
+          <div class="form-group"><label for="profLicenseNumber">Driving License Number</label><input type="text" id="profLicenseNumber" /></div>
+          <button class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+        </div>
+        <div class="card">
+          <h3>Change Password</h3>
+          <div id="passAlert" class="alert hidden"></div>
+          <div class="form-group"><label for="currentPassword">Current Password</label><input type="password" id="currentPassword" /></div>
+          <div class="form-group"><label for="newPassword">New Password</label><input type="password" id="newPassword" minlength="6" placeholder="At least 6 characters" /></div>
+          <button class="btn btn-outline" id="changePassBtn">Update Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    const account = requireRole('driver');
+    renderNavbar(account);
+    document.getElementById('verifyNote').innerHTML = account.verified
+      ? 'Your profile is verified ✅ — you are eligible for rider assignments.'
+      : '<span style="color:var(--warning);">Your profile is pending admin verification. You will not receive rider assignments until verified.</span>';
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    async function loadEarnings() {
+      const data = await apiRequest('/driver/earnings');
+      document.getElementById('earningsCards').innerHTML = `
+        <div class="card kpi-card"><div class="kpi-value">${data.activeRiders}</div><div class="kpi-label">Active Riders</div></div>
+        <div class="card kpi-card"><div class="kpi-value">${fmtMoney(data.estimatedEarnings)}</div><div class="kpi-label">Estimated Earnings (${data.driverSharePercent}% share)</div></div>
+        <div class="card kpi-card"><div class="kpi-value">${fmtMoney(data.totalRevenueGenerated)}</div><div class="kpi-label">Total Revenue Generated</div></div>
+        <div class="card kpi-card"><div class="kpi-value">${data.averageRating != null ? data.averageRating + ' ★' : '—'}</div><div class="kpi-label">Average Rating</div></div>
+      `;
+    }
+
+    const NEXT_STEP = {
+      not_started: { next: 'on_the_way', label: 'Start Trip (On the way)' },
+      on_the_way: { next: 'arrived', label: 'Mark Arrived at Pickup' },
+      arrived: { next: 'picked_up', label: 'Start Ride (Picked Up)' },
+      picked_up: { next: 'completed', label: 'Complete Trip' },
+    };
+
+    async function loadRiders() {
+      const data = await apiRequest('/driver/my-subscriptions');
+      const el = document.getElementById('ridersList');
+      if (data.subscriptions.length === 0) { el.innerHTML = `<div class="card empty-state" style="grid-column:1/-1;">No riders assigned yet.</div>`; return; }
+      el.innerHTML = data.subscriptions.map(s => {
+        const step = NEXT_STEP[s.todayStatus];
+        const isDone = s.todayStatus === 'completed' || s.todayStatus === 'missed';
+        return `
+        <div class="card">
+          <h3 style="margin-bottom:2px;">${s.riderName}</h3>
+          <div style="color:var(--muted);font-size:0.85rem;margin-bottom:10px;">${s.riderPhone || ''} · ${s.planName}</div>
+          <div style="font-size:0.9rem;margin-bottom:6px;">${s.pickup} → ${s.drop}${s.pickupLat != null ? `<button class="btn btn-outline btn-sm" style="margin-left:6px;" onclick="openRouteMap(${s.pickupLat}, ${s.pickupLng}, ${s.dropLat}, ${s.dropLng}, '${(s.pickup || '').replace(/'/g, '')}', '${(s.drop || '').replace(/'/g, '')}')">View Route</button>` : ''}</div>
+          <div style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;">Pickup time: ${s.preferredTime}</div>
+          <div style="margin-bottom:12px;">${tripFlowHtml(s.todayStatus)}</div>
+          <div style="margin-bottom:10px;"><button class="btn btn-success btn-sm" onclick="toggleLiveLocation('${s.id}')">📍 Share live location</button> <span id="locState-${s.id}" style="font-size:.8rem;color:var(--muted)">Off</span></div>
+          <div style="margin-bottom:10px;"><button class="btn btn-outline btn-sm" onclick="openChatModal('${s.id}', '${(s.riderName || '').replace(/'/g, '')}', false, '/chat')">💬 Chat with Rider</button></div>
+          ${!isDone ? `<button class="btn btn-primary btn-sm" onclick="updateTripStatus('${s.id}','${step.next}')">${step.label}</button> <button class="btn btn-danger btn-sm" onclick="updateTripStatus('${s.id}','missed')">Mark Missed</button>`
+            : `<span style="color:var(--muted);font-size:0.85rem;">Today's trip is ${s.todayStatus}. Resets automatically tomorrow.</span>`}
+        </div>`;
+      }).join('');
+    }
+
+    const locationWatches = new Map();
+    async function toggleLiveLocation(subscriptionId) {
+      if (locationWatches.has(subscriptionId)) { navigator.geolocation.clearWatch(locationWatches.get(subscriptionId)); locationWatches.delete(subscriptionId); const state = document.getElementById(`locState-${subscriptionId}`); if (state) state.textContent = 'Off'; return; }
+      if (!navigator.geolocation) return alert('This browser does not support GPS location.');
+      if (!window.isSecureContext && location.hostname !== 'localhost') return alert('Live GPS requires HTTPS (or localhost).');
+      const state = document.getElementById(`locState-${subscriptionId}`); if (state) state.textContent = 'Requesting permission…';
+      const watchId = navigator.geolocation.watchPosition(async pos => {
+        try { await apiRequest(`/tracking/${encodeURIComponent(subscriptionId)}/location`, { method: 'POST', body: { latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy } }); const el = document.getElementById(`locState-${subscriptionId}`); if (el) el.textContent = `Live · ${new Date().toLocaleTimeString()}`; }
+        catch (e) { const el = document.getElementById(`locState-${subscriptionId}`); if (el) el.textContent = 'Update failed'; }
+      }, err => { alert('Location unavailable: ' + err.message); const el = document.getElementById(`locState-${subscriptionId}`); if (el) el.textContent = 'Location error'; }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
+      locationWatches.set(subscriptionId, watchId); if (state) state.textContent = 'Waiting for GPS…';
+    }
+    window.addEventListener('beforeunload', () => locationWatches.forEach(id => navigator.geolocation.clearWatch(id)));
+
+    async function updateTripStatus(subscriptionId, status) {
+      try { await apiRequest('/driver/trip-status', { method: 'POST', body: { subscriptionId, status } }); loadRiders(); loadAttendance(); loadEarnings(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function loadAttendance() {
+      const data = await apiRequest('/driver/attendance');
+      const body = document.getElementById('attendanceBody');
+      if (data.attendance.length === 0) { body.innerHTML = `<tr><td colspan="4" class="empty-state">No attendance logged yet.</td></tr>`; return; }
+      body.innerHTML = data.attendance.map(a => `<tr><td>${a.date}</td><td>${statusBadge(a.status)}</td><td>${a.note || '—'}</td><td>${fmtDateTime(a.createdAt)}</td></tr>`).join('');
+    }
+
+    async function loadReviews() {
+      const data = await apiRequest('/driver/reviews');
+      const el = document.getElementById('reviewsList');
+      if (data.reviews.length === 0) { el.innerHTML = `<div class="empty-state">No reviews yet.</div>`; return; }
+      el.innerHTML = `<div style="margin-bottom:16px;font-size:1.1rem;">${starDisplay(Math.round(data.average))} <b>${data.average}</b> average from ${data.count} review${data.count === 1 ? '' : 's'}</div>` +
+        data.reviews.map(r => `<div class="notif-item"><div>${starDisplay(r.stars)} <b>${r.riderName}</b></div>${r.comment ? `<div style="margin-top:4px;">${r.comment}</div>` : ''}<div class="notif-time">${fmtDateTime(r.createdAt)}</div></div>`).join('');
+    }
+
+    async function loadNotifications() {
+      const data = await apiRequest('/notifications/mine');
+      const el = document.getElementById('notifList');
+      el.innerHTML = data.notifications.length === 0 ? `<div class="empty-state">No notifications yet.</div>`
+        : data.notifications.map(n => `<div class="notif-item">${n.message}<div class="notif-time">${fmtDateTime(n.createdAt)}</div></div>`).join('');
+    }
+
+    document.getElementById('cmpBtn').addEventListener('click', async () => {
+      hideAlert('cmpAlert');
+      const subject = document.getElementById('cmpSubject').value.trim();
+      const message = document.getElementById('cmpMessage').value.trim();
+      if (!subject || !message) return showAlert('cmpAlert', 'Please fill in both fields.');
+      try {
+        await apiRequest('/complaints', { method: 'POST', body: { subject, message } });
+        document.getElementById('cmpSubject').value = ''; document.getElementById('cmpMessage').value = '';
+        showAlert('cmpAlert', 'Submitted successfully.', 'success');
+        loadComplaints();
+      } catch (err) { showAlert('cmpAlert', err.message); }
+    });
+
+    async function loadComplaints() {
+      const data = await apiRequest('/complaints/mine');
+      const el = document.getElementById('cmpList');
+      el.innerHTML = data.complaints.length === 0 ? `<div class="empty-state">No complaints raised yet.</div>`
+        : data.complaints.map(c => `<div class="notif-item"><b>${c.subject}</b> ${statusBadge(c.status)}<div>${c.message}</div><div class="notif-time">${fmtDateTime(c.createdAt)}</div></div>`).join('');
+    }
+
+    function loadProfileForm() {
+      document.getElementById('profName').value = account.name || '';
+      document.getElementById('profPhone').value = account.phone || '';
+      document.getElementById('profCity').value = account.city || '';
+      document.getElementById('profVehicleType').value = account.vehicleType || 'Hatchback';
+      document.getElementById('profVehicleNumber').value = account.vehicleNumber || '';
+      document.getElementById('profLicenseNumber').value = account.licenseNumber || '';
+    }
+
+    document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+      hideAlert('profileAlert');
+      try {
+        const data = await apiRequest('/auth/profile', { method: 'PUT', body: {
+          name: document.getElementById('profName').value.trim(),
+          phone: document.getElementById('profPhone').value.trim(),
+          city: document.getElementById('profCity').value.trim(),
+          vehicleType: document.getElementById('profVehicleType').value,
+          vehicleNumber: document.getElementById('profVehicleNumber').value.trim(),
+          licenseNumber: document.getElementById('profLicenseNumber').value.trim(),
+        }});
+        setSession(getToken(), data.account);
+        Object.assign(account, data.account);
+        showAlert('profileAlert', 'Profile updated.', 'success');
+      } catch (err) { showAlert('profileAlert', err.message); }
+    });
+
+    document.getElementById('changePassBtn').addEventListener('click', async () => {
+      hideAlert('passAlert');
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      if (!currentPassword || !newPassword) return showAlert('passAlert', 'Please fill in both fields.');
+      try {
+        await apiRequest('/auth/password', { method: 'PUT', body: { currentPassword, newPassword } });
+        document.getElementById('currentPassword').value = ''; document.getElementById('newPassword').value = '';
+        showAlert('passAlert', 'Password updated.', 'success');
+      } catch (err) { showAlert('passAlert', err.message); }
+    });
+
+    loadProfileForm();
+    loadEarnings();
+    loadRiders();
+    loadAttendance();
+    loadReviews();
+    loadNotifications();
+    loadComplaints();
+  </script>
+  <script src="js/theme-motion.js"></script>
+</body>
+</html>

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Dashboard — Smart Ride</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+  <div class="container">
+    <h1 class="page-title">My Dashboard</h1>
+    <p class="page-sub">Manage your subscription, payments, and ride details.</p>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="subscribe">Subscribe</button>
+      <button class="tab-btn" data-tab="rides">My Rides</button>
+      <button class="tab-btn" data-tab="payments">Payments & Invoices</button>
+      <button class="tab-btn" data-tab="notifications">Notifications</button>
+      <button class="tab-btn" data-tab="support">Support</button>
+      <button class="tab-btn" data-tab="profile">Profile</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-subscribe">
+      <div id="subAlert" class="alert hidden"></div>
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>Choose a Plan</h3>
+          <div id="planOptions"></div>
+        </div>
+        <div class="card">
+          <h3>Route Details</h3>
+          <div class="form-group"><label for="pickupInput">Pickup Location</label><input type="text" id="pickupInput" /></div>
+          <div class="form-group"><label for="dropInput">Drop Location</label><input type="text" id="dropInput" /></div>
+          <div class="form-group"><label for="timeInput">Preferred Pickup Time</label><input type="text" id="timeInput" placeholder="e.g. 08:30 AM" /></div>
+          <div class="form-group">
+            <label>Set Route on Map <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
+            <div id="pickMapContainer" class="map-box"></div>
+            <div class="map-hint">Click once for pickup, click again for drop. <button type="button" class="btn btn-outline btn-sm" id="resetPinsBtn" style="margin-left:4px;">Reset pins</button></div>
+          </div>
+          <button class="btn btn-primary btn-block" id="createSubBtn">Create Subscription</button>
+        </div>
+      </div>
+
+      <div id="paymentBox" class="card hidden" style="margin-top:20px;">
+        <h3>Pay via UPI</h3>
+        <div id="payAlert" class="alert hidden"></div>
+        <div id="payNotConfigured" class="alert alert-info hidden">Online payments haven't been set up by the admin yet. Please contact support to complete your subscription.</div>
+        <div id="payConfigured">
+          <div class="grid grid-2" style="align-items:start;">
+            <div style="text-align:center;">
+              <div id="qrHolder" style="display:inline-block;padding:14px;background:#fff;border:1px solid var(--border);border-radius:14px;min-width:200px;min-height:200px;"></div>
+              <div class="mono" id="upiIdText" style="margin-top:12px;font-size:0.9rem;color:var(--ink);"></div>
+              <div><button class="btn btn-outline btn-sm" id="copyUpiBtn" style="margin-top:8px;">Copy UPI ID</button></div>
+            </div>
+            <div>
+              <p style="color:var(--muted);font-size:0.9rem;margin-top:0;">Scan this QR with any UPI app — the amount <b id="payAmountText"></b> is pre-filled. Or pay manually to the UPI ID shown. After paying, fill in the details below.</p>
+              <div class="form-group"><label for="utrInput">UPI Transaction / Reference Number (UTR)</label><input type="text" id="utrInput" placeholder="12-digit number shown after payment" /></div>
+              <div class="form-group"><label for="payerUpiInput">Your UPI ID (the one you paid from)</label><input type="text" id="payerUpiInput" placeholder="yourname@bank" /></div>
+              <div class="form-group"><label for="payerNameInput">Name on your UPI account</label><input type="text" id="payerNameInput" placeholder="As shown in your UPI app" /></div>
+              <div class="form-group"><label for="payNoteInput">Note (optional)</label><input type="text" id="payNoteInput" placeholder="Anything the admin should know" /></div>
+              <button class="btn btn-success btn-block" id="submitPayBtn">I've Paid — Submit for Verification</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-rides">
+      <div class="section-header"><h3 style="margin:0;">My Subscriptions</h3></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Plan</th><th>Route</th><th>Driver</th><th>Today's Trip</th><th>Rating</th><th>Status</th><th>Valid Till</th><th></th></tr></thead>
+          <tbody id="ridesBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-payments">
+      <div class="section-header"><h3 style="margin:0;">Payment History</h3></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Invoice #</th><th>Plan</th><th>Amount</th><th>UTR / Ref No.</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody id="paymentsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-notifications">
+      <div class="card"><div id="notifList"></div></div>
+    </div>
+
+    <div class="tab-panel" id="tab-support">
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>Raise a Complaint / Feedback</h3>
+          <div id="cmpAlert" class="alert hidden"></div>
+          <div class="form-group"><label for="cmpSubject">Subject</label><input type="text" id="cmpSubject" /></div>
+          <div class="form-group"><label for="cmpMessage">Message</label><textarea id="cmpMessage"></textarea></div>
+          <button class="btn btn-primary" id="cmpBtn">Submit</button>
+        </div>
+        <div class="card"><h3>My Complaints</h3><div id="cmpList"></div></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-profile">
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>My Profile</h3>
+          <div id="profileAlert" class="alert hidden"></div>
+          <div class="form-group"><label for="profName">Full Name</label><input type="text" id="profName" /></div>
+          <div class="form-group"><label for="profPhone">Phone</label><input type="text" id="profPhone" /></div>
+          <div class="form-group"><label for="profCity">City</label><input type="text" id="profCity" /></div>
+          <div class="form-group"><label for="profPickup">Default Pickup</label><input type="text" id="profPickup" /></div>
+          <div class="form-group"><label for="profDrop">Default Drop</label><input type="text" id="profDrop" /></div>
+          <button class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+        </div>
+        <div class="card">
+          <h3>Change Password</h3>
+          <div id="passAlert" class="alert hidden"></div>
+          <div class="form-group"><label for="currentPassword">Current Password</label><input type="password" id="currentPassword" /></div>
+          <div class="form-group"><label for="newPassword">New Password</label><input type="password" id="newPassword" minlength="6" placeholder="At least 6 characters" /></div>
+          <button class="btn btn-outline" id="changePassBtn">Update Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    const account = requireRole('user');
+    renderNavbar(account);
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    let plans = [];
+    let selectedPlanId = null;
+    let pendingSubscriptionId = null;
+    let paymentSettings = null;
+    let subscriptionsCache = [];
+
+    async function loadPlans() {
+      const res = await fetch('/api/plans');
+      const data = await res.json();
+      plans = data.plans;
+      document.getElementById('planOptions').innerHTML = plans.map(p => `
+        <label style="display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;">
+          <input type="radio" name="planRadio" value="${p.id}" onchange="selectedPlanId='${p.id}'" />
+          <div><b>${p.name}</b> — ${fmtMoney(p.price)} <span style="color:var(--muted);">(${p.durationDays} days)</span>
+          <div style="font-size:0.8rem;color:var(--muted);">${p.description}</div></div>
+        </label>
+      `).join('');
+    }
+
+    async function loadPaymentSettings() {
+      try { const data = await apiRequest('/settings/payment'); paymentSettings = data.settings; }
+      catch (e) { paymentSettings = null; }
+    }
+
+    function buildUpiLink(amount, subId) {
+      const { upiId, payeeName } = paymentSettings;
+      const amt = Number(amount).toFixed(2);
+      const tn = encodeURIComponent('SmartRide-' + subId.slice(-8));
+      const pn = encodeURIComponent(payeeName || 'Smart Ride');
+      return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${pn}&am=${amt}&cu=INR&tn=${tn}`;
+    }
+
+    async function renderPaymentBox(subId, amount) {
+      document.getElementById('paymentBox').classList.remove('hidden');
+      hideAlert('payAlert');
+      await loadPaymentSettings();
+
+      if (!paymentSettings || !paymentSettings.upiId) {
+        document.getElementById('payConfigured').classList.add('hidden');
+        document.getElementById('payNotConfigured').classList.remove('hidden');
+        return;
+      }
+      document.getElementById('payConfigured').classList.remove('hidden');
+      document.getElementById('payNotConfigured').classList.add('hidden');
+      document.getElementById('payAmountText').textContent = fmtMoney(amount);
+      document.getElementById('upiIdText').textContent = paymentSettings.upiId;
+
+      const qrHolder = document.getElementById('qrHolder');
+      qrHolder.innerHTML = '';
+      const link = buildUpiLink(amount, subId);
+      if (window.QRCode) new QRCode(qrHolder, { text: link, width: 190, height: 190 });
+      else qrHolder.innerHTML = `<div style="padding:16px;max-width:200px;word-break:break-all;font-family:var(--font-mono);font-size:0.72rem;">${link}</div>`;
+    }
+
+    document.getElementById('copyUpiBtn').addEventListener('click', () => {
+      if (!paymentSettings || !paymentSettings.upiId) return;
+      navigator.clipboard.writeText(paymentSettings.upiId).then(() => {
+        const btn = document.getElementById('copyUpiBtn');
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = original; }, 1500);
+      });
+    });
+
+    document.getElementById('createSubBtn').addEventListener('click', async () => {
+      hideAlert('subAlert');
+      if (!selectedPlanId) return showAlert('subAlert', 'Please select a plan.');
+      const pickup = document.getElementById('pickupInput').value.trim();
+      const drop = document.getElementById('dropInput').value.trim();
+      const preferredTime = document.getElementById('timeInput').value.trim();
+      if (!pickup || !drop) return showAlert('subAlert', 'Please enter both pickup and drop locations.');
+      try {
+        const body = { planId: selectedPlanId, pickup, drop, preferredTime, city: account.city || '' };
+        if (pickupCoord) { body.pickupLat = pickupCoord.lat; body.pickupLng = pickupCoord.lng; }
+        if (dropCoord) { body.dropLat = dropCoord.lat; body.dropLng = dropCoord.lng; }
+        const data = await apiRequest('/subscriptions', { method: 'POST', body });
+        pendingSubscriptionId = data.subscription.id;
+        const plan = plans.find(p => p.id === selectedPlanId);
+        await renderPaymentBox(pendingSubscriptionId, plan ? plan.price : 0);
+        showAlert('subAlert', 'Subscription created! Scroll down to pay.', 'success');
+        loadRides();
+        document.getElementById('paymentBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch (err) { showAlert('subAlert', err.message); }
+    });
+
+    document.getElementById('submitPayBtn').addEventListener('click', async () => {
+      hideAlert('payAlert');
+      const utrNumber = document.getElementById('utrInput').value.trim();
+      const payerUpiId = document.getElementById('payerUpiInput').value.trim();
+      const payerName = document.getElementById('payerNameInput').value.trim();
+      const note = document.getElementById('payNoteInput').value.trim();
+      if (!utrNumber) return showAlert('payAlert', 'Please enter the UPI transaction / reference number.');
+      if (!payerUpiId) return showAlert('payAlert', 'Please enter the UPI ID you paid from.');
+      if (!payerName) return showAlert('payAlert', 'Please enter the name on your UPI account.');
+      const btn = document.getElementById('submitPayBtn');
+      btn.disabled = true; btn.textContent = 'Submitting...';
+      try {
+        await apiRequest('/payments/upi-request', { method: 'POST', body: { subscriptionId: pendingSubscriptionId, utrNumber, payerUpiId, payerName, note } });
+        showAlert('subAlert', "Payment submitted! You'll be notified once the admin verifies it.", 'success');
+        document.getElementById('paymentBox').classList.add('hidden');
+        document.getElementById('utrInput').value = ''; document.getElementById('payerUpiInput').value = '';
+        document.getElementById('payerNameInput').value = ''; document.getElementById('payNoteInput').value = '';
+        loadRides(); loadPayments();
+      } catch (err) { showAlert('payAlert', err.message); }
+      finally { btn.disabled = false; btn.textContent = "I've Paid — Submit for Verification"; }
+    });
+
+    async function loadRides() {
+      const data = await apiRequest('/subscriptions/mine');
+      subscriptionsCache = data.subscriptions;
+      const body = document.getElementById('ridesBody');
+      if (data.subscriptions.length === 0) {
+        body.innerHTML = `<tr><td colspan="8" class="empty-state">No subscriptions yet. Create one in the Subscribe tab.</td></tr>`;
+        return;
+      }
+      body.innerHTML = data.subscriptions.map(s => `
+        <tr>
+          <td>${s.planName}</td>
+          <td>${s.pickup} → ${s.drop}${s.pickupLat != null ? `<br><button class="btn btn-outline btn-sm" style="margin-top:4px;" onclick="openRouteMap(${s.pickupLat}, ${s.pickupLng}, ${s.dropLat}, ${s.dropLng}, '${(s.pickup || '').replace(/'/g, '')}', '${(s.drop || '').replace(/'/g, '')}')">View Route</button>` : ''}</td>
+          <td>${s.driverName ? `${s.driverName}<br><span style="color:var(--muted);font-size:0.8rem;">${s.vehicleNumber || ''}</span>${s.status === 'active' ? `<br><button class="btn btn-success btn-sm" style="margin-top:6px;" onclick="openLiveTracking('${s.id}', '${(s.driverName || 'Driver').replace(/'/g, '')}')">📍 Track Driver Live</button>` : ''}` : '—'}</td>
+          <td>${s.status === 'active' ? tripFlowHtml(s.todayStatus) : '—'}</td>
+          <td>${s.status === 'active' && s.driverName ? `${starDisplay(s.myRating)}<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-outline btn-sm" onclick="openRateBox('${s.id}', ${s.myRating || 0})">${s.myRating ? 'Edit Rating' : 'Rate Driver'}</button><button class="btn btn-outline btn-sm" onclick="openChatModal('${s.id}', '${(s.driverName || '').replace(/'/g, '')}', false, '/chat')">💬 Chat</button></div>` : '—'}</td>
+          <td>${statusBadge(s.status)}</td>
+          <td>${fmtDate(s.endDate)}</td>
+          <td>
+            ${s.status === 'pending_payment' ? `<button class="btn btn-success btn-sm" onclick="resumePayment('${s.id}')">Pay Now</button> ` : ''}
+            ${isExpiringSoon(s) ? `<button class="btn btn-success btn-sm" onclick="renewSub('${s.id}')">Renew</button> ` : ''}
+            ${s.status === 'active' || s.status === 'pending_payment' ? `<button class="btn btn-danger btn-sm" onclick="cancelSub('${s.id}')">Cancel</button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function isExpiringSoon(s) {
+      if (s.status !== 'active' || !s.endDate) return false;
+      const daysLeft = (new Date(s.endDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000);
+      return daysLeft <= 5;
+    }
+
+    async function renewSub(subscriptionId) {
+      try {
+        const data = await apiRequest(`/subscriptions/${subscriptionId}/renew`, { method: 'POST' });
+        await loadRides();
+        await resumePayment(data.subscription.id);
+      } catch (err) { alert(err.message); }
+    }
+
+    async function resumePayment(subscriptionId) {
+      pendingSubscriptionId = subscriptionId;
+      const sub = subscriptionsCache.find(s => s.id === subscriptionId);
+      const amount = sub ? sub.planPrice : 0;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelector('.tab-btn[data-tab="subscribe"]').classList.add('active');
+      document.getElementById('tab-subscribe').classList.add('active');
+      await renderPaymentBox(subscriptionId, amount);
+      document.getElementById('paymentBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    async function cancelSub(id) {
+      if (!confirm('Cancel this subscription?')) return;
+      try { await apiRequest(`/subscriptions/${id}/cancel`, { method: 'POST' }); loadRides(); }
+      catch (err) { alert(err.message); }
+    }
+
+    function openRateBox(subscriptionId, currentStars) {
+      ensureRateModal();
+      document.getElementById('rateModal').classList.remove('hidden');
+      document.getElementById('rateModalBody').innerHTML = starPickerHtml('rateDriver', currentStars);
+      document.getElementById('rateCommentInput').value = '';
+      document.getElementById('rateSubmitBtn').onclick = () => submitRating(subscriptionId);
+    }
+
+    function ensureRateModal() {
+      if (document.getElementById('rateModal')) return;
+      const div = document.createElement('div');
+      div.id = 'rateModal';
+      div.className = 'modal-overlay hidden';
+      div.innerHTML = `<div class="modal-box"><button class="modal-close" onclick="document.getElementById('rateModal').classList.add('hidden')">✕</button><h3 style="margin-top:0;">Rate your driver</h3><div id="rateModalBody" style="margin-bottom:14px;"></div><div class="form-group"><label for="rateCommentInput">Comment (optional)</label><textarea id="rateCommentInput" placeholder="How was your ride experience?"></textarea></div><button class="btn btn-primary btn-block" id="rateSubmitBtn">Submit Rating</button></div>`;
+      document.body.appendChild(div);
+      div.addEventListener('click', (e) => { if (e.target === div) div.classList.add('hidden'); });
+    }
+
+    async function submitRating(subscriptionId) {
+      const stars = Number(document.getElementById('starValue-rateDriver').value);
+      const comment = document.getElementById('rateCommentInput').value.trim();
+      if (!stars) { alert('Please select a star rating.'); return; }
+      try {
+        await apiRequest('/ratings', { method: 'POST', body: { subscriptionId, stars, comment } });
+        document.getElementById('rateModal').classList.add('hidden');
+        loadRides();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function loadPayments() {
+      const data = await apiRequest('/payments/mine');
+      const body = document.getElementById('paymentsBody');
+      if (data.payments.length === 0) { body.innerHTML = `<tr><td colspan="6" class="empty-state">No payments yet.</td></tr>`; return; }
+      body.innerHTML = data.payments.map(p => `
+        <tr>
+          <td>${p.invoiceNumber || '—'}</td><td>${p.planName}</td><td>${fmtMoney(p.amount)}</td>
+          <td class="mono" style="font-size:0.8rem;">${p.utrNumber || '—'}</td>
+          <td>${statusBadge(p.status)}${p.status === 'rejected' && p.rejectionReason ? `<div style="font-size:0.75rem;color:var(--danger);margin-top:4px;">${p.rejectionReason}</div>` : ''}</td>
+          <td>${fmtDateTime(p.createdAt)}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function loadNotifications() {
+      const data = await apiRequest('/notifications/mine');
+      const el = document.getElementById('notifList');
+      el.innerHTML = data.notifications.length === 0 ? `<div class="empty-state">No notifications yet.</div>`
+        : data.notifications.map(n => `<div class="notif-item">${n.message}<div class="notif-time">${fmtDateTime(n.createdAt)}</div></div>`).join('');
+    }
+
+    document.getElementById('cmpBtn').addEventListener('click', async () => {
+      hideAlert('cmpAlert');
+      const subject = document.getElementById('cmpSubject').value.trim();
+      const message = document.getElementById('cmpMessage').value.trim();
+      if (!subject || !message) return showAlert('cmpAlert', 'Please fill in both fields.');
+      try {
+        await apiRequest('/complaints', { method: 'POST', body: { subject, message } });
+        document.getElementById('cmpSubject').value = ''; document.getElementById('cmpMessage').value = '';
+        showAlert('cmpAlert', 'Submitted successfully.', 'success');
+        loadComplaints();
+      } catch (err) { showAlert('cmpAlert', err.message); }
+    });
+
+    async function loadComplaints() {
+      const data = await apiRequest('/complaints/mine');
+      const el = document.getElementById('cmpList');
+      el.innerHTML = data.complaints.length === 0 ? `<div class="empty-state">No complaints raised yet.</div>`
+        : data.complaints.map(c => `<div class="notif-item"><b>${c.subject}</b> ${statusBadge(c.status)}<div>${c.message}</div><div class="notif-time">${fmtDateTime(c.createdAt)}</div></div>`).join('');
+    }
+
+    let pickMap, pickupMarker = null, dropMarker = null, pickupCoord = null, dropCoord = null;
+    let liveTrackMap = null, liveDriverMarker = null, liveTrackTimer = null, livePickupMarker = null, liveDropMarker = null;
+    function openLiveTracking(subscriptionId, driverName) {
+      let modal = document.getElementById('liveTrackModal');
+      if (!modal) { modal = document.createElement('div'); modal.id = 'liveTrackModal'; modal.className = 'modal-overlay'; modal.innerHTML = `<div class="modal-box" style="width:min(900px,96vw);max-width:900px"><button class="modal-close" onclick="closeLiveTracking()">✕</button><h3 style="margin-top:0">Live driver tracking</h3><p id="liveTrackInfo" style="color:var(--muted)">Connecting…</p><div id="liveTrackMap" style="height:420px;border-radius:14px;overflow:hidden"></div><p style="font-size:.8rem;color:var(--muted)">Location refreshes automatically while the assigned driver shares GPS.</p></div>`; document.body.appendChild(modal); }
+      modal.classList.remove('hidden'); document.getElementById('liveTrackInfo').textContent = `Tracking ${driverName} · waiting for location…`;
+      if (liveTrackMap) { liveTrackMap.remove(); liveTrackMap = null; } liveDriverMarker = null; livePickupMarker = null; liveDropMarker = null;
+      liveTrackMap = L.map('liveTrackMap').setView([20.5937,78.9629],5); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(liveTrackMap); setTimeout(() => liveTrackMap && liveTrackMap.invalidateSize(),150);
+      const refresh = async () => { try { const d = await apiRequest(`/tracking/${encodeURIComponent(subscriptionId)}`); const info = document.getElementById('liveTrackInfo'); if (!info) return; if (!d.tracking) { info.textContent = d.message || 'Waiting for driver GPS…'; return; }
+        const {latitude,longitude,updatedAt,accuracy} = d.location, point = [latitude,longitude]; if (!liveDriverMarker) liveDriverMarker = L.marker(point).addTo(liveTrackMap).bindPopup('Driver location'); else liveDriverMarker.setLatLng(point);
+        const bounds = [point]; if (d.pickup && Number.isFinite(d.pickup.latitude) && Number.isFinite(d.pickup.longitude)) { const p = [d.pickup.latitude,d.pickup.longitude]; bounds.push(p); if (!livePickupMarker) livePickupMarker = L.marker(p).addTo(liveTrackMap).bindPopup('Pickup point'); else livePickupMarker.setLatLng(p); } if (d.drop && Number.isFinite(d.drop.latitude) && Number.isFinite(d.drop.longitude)) { const p = [d.drop.latitude,d.drop.longitude]; bounds.push(p); if (!liveDropMarker) liveDropMarker = L.marker(p).addTo(liveTrackMap).bindPopup('Drop-off point'); else liveDropMarker.setLatLng(p); }
+        if (bounds.length > 1) liveTrackMap.fitBounds(bounds,{padding:[28,28],maxZoom:14}); else liveTrackMap.setView(point,16);
+        info.textContent = `Updated ${new Date(updatedAt).toLocaleTimeString()}${accuracy ? ` · GPS accuracy ±${Math.round(accuracy)} m` : ''} · Status: ${(d.status || 'unknown').replace(/_/g,' ')}`;
+      } catch (e) { const info = document.getElementById('liveTrackInfo'); if (info) info.textContent = e.message || 'Unable to load driver location.'; } };
+      refresh(); if (liveTrackTimer) clearInterval(liveTrackTimer); liveTrackTimer = setInterval(refresh,5000);
+    }
+    function closeLiveTracking() { const modal = document.getElementById('liveTrackModal'); if (modal) modal.classList.add('hidden'); if (liveTrackTimer) clearInterval(liveTrackTimer); liveTrackTimer = null; liveDriverMarker = null; livePickupMarker = null; liveDropMarker = null; if (liveTrackMap) { liveTrackMap.remove(); liveTrackMap = null; } }
+
+    function initPickMap() {
+      pickMap = L.map('pickMapContainer').setView([20.5937, 78.9629], 5);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(pickMap);
+      pickMap.on('click', (e) => {
+        if (!pickupCoord) { pickupCoord = e.latlng; pickupMarker = L.marker(e.latlng, { icon: L.divIcon({ className: 'leaflet-pin-pickup', iconSize: [16, 16] }) }).addTo(pickMap).bindPopup('Pickup').openPopup(); }
+        else if (!dropCoord) { dropCoord = e.latlng; dropMarker = L.marker(e.latlng, { icon: L.divIcon({ className: 'leaflet-pin-drop', iconSize: [16, 16] }) }).addTo(pickMap).bindPopup('Drop').openPopup(); }
+      });
+      if (navigator.geolocation) navigator.geolocation.getCurrentPosition((pos) => pickMap.setView([pos.coords.latitude, pos.coords.longitude], 13), () => {}, { timeout: 3000 });
+    }
+    document.getElementById('resetPinsBtn').addEventListener('click', () => {
+      if (pickupMarker) pickMap.removeLayer(pickupMarker);
+      if (dropMarker) pickMap.removeLayer(dropMarker);
+      pickupMarker = null; dropMarker = null; pickupCoord = null; dropCoord = null;
+    });
+
+    (function prefill() {
+      if (account.pickup) document.getElementById('pickupInput').value = account.pickup;
+      if (account.drop) document.getElementById('dropInput').value = account.drop;
+    })();
+
+    function loadProfileForm() {
+      document.getElementById('profName').value = account.name || '';
+      document.getElementById('profPhone').value = account.phone || '';
+      document.getElementById('profCity').value = account.city || '';
+      document.getElementById('profPickup').value = account.pickup || '';
+      document.getElementById('profDrop').value = account.drop || '';
+    }
+
+    document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+      hideAlert('profileAlert');
+      try {
+        const data = await apiRequest('/auth/profile', { method: 'PUT', body: {
+          name: document.getElementById('profName').value.trim(),
+          phone: document.getElementById('profPhone').value.trim(),
+          city: document.getElementById('profCity').value.trim(),
+          pickup: document.getElementById('profPickup').value.trim(),
+          drop: document.getElementById('profDrop').value.trim(),
+        }});
+        setSession(getToken(), data.account);
+        Object.assign(account, data.account);
+        showAlert('profileAlert', 'Profile updated.', 'success');
+      } catch (err) { showAlert('profileAlert', err.message); }
+    });
+
+    document.getElementById('changePassBtn').addEventListener('click', async () => {
+      hideAlert('passAlert');
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      if (!currentPassword || !newPassword) return showAlert('passAlert', 'Please fill in both fields.');
+      try {
+        await apiRequest('/auth/password', { method: 'PUT', body: { currentPassword, newPassword } });
+        document.getElementById('currentPassword').value = ''; document.getElementById('newPassword').value = '';
+        showAlert('passAlert', 'Password updated.', 'success');
+      } catch (err) { showAlert('passAlert', err.message); }
+    });
+
+    loadProfileForm();
+    initPickMap();
+    loadPlans();
+    loadPaymentSettings();
+    loadRides();
+    loadPayments();
+    loadNotifications();
+    loadComplaints();
+  </script>
+  <script src="js/theme-motion.js"></script>
+</body>
+</html>

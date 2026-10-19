@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Login — Smart Ride</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h2>Welcome back</h2>
+      <p style="color:var(--muted);margin-top:-10px;">Login to your Smart Ride account.</p>
+      <div id="alert" class="alert hidden"></div>
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">Email or Mobile Number</label>
+          <input type="text" id="email" required placeholder="you@example.com or 9876543210" />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" required placeholder="••••••••" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="loginBtn">Login</button>
+      </form>
+      <div class="auth-footer">
+        Don't have an account? <a href="register.html">Sign up here</a>
+        <br /><br />
+        <span style="font-size:0.8rem;">Admin demo login: <b>admin@smartride.com</b> / <b>admin123</b></span>
+      </div>
+    </div>
+  </div>
+  <script src="js/api.js"></script>
+  <script>
+    renderNavbar(null);
+    (function redirectIfLoggedIn() {
+      const acc = getAccount();
+      if (acc && getToken()) {
+        const dash = acc.role === 'user' ? 'user-dashboard.html' : acc.role === 'driver' ? 'driver-dashboard.html' : 'admin-dashboard.html';
+        window.location.href = dash;
+      }
+    })();
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert('alert');
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true; btn.textContent = 'Logging in...';
+      try {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const data = await apiRequest('/auth/login', { method: 'POST', body: { email, password }, auth: false });
+        setSession(data.token, data.account);
+        const dash = data.account.role === 'user' ? 'user-dashboard.html' : data.account.role === 'driver' ? 'driver-dashboard.html' : 'admin-dashboard.html';
+        window.location.href = dash;
+      } catch (err) {
+        showAlert('alert', err.message);
+        btn.disabled = false; btn.textContent = 'Login';
+      }
+    });
+  </script>
+  <script src="js/theme-motion.js"></script>
+</body>
+</html>

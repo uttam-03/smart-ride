@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smart Ride — Monthly Pickup & Drop Subscription</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+
+  <main>
+  <section class="hero hero-home">
+    <div class="hero-inner hero-layout">
+      <div class="hero-copy">
+        <span class="hero-eyebrow">✦ Smart &amp; Safe Transportation</span>
+        <h1>Your Ride,<br><span>Our Priority</span></h1>
+        <p class="lead">Smart Ride connects you with verified drivers for a safe, comfortable and affordable journey. Whether it’s your daily commute or a special trip, we’ve got you covered.</p>
+        <div class="hero-actions"><a class="btn btn-primary" href="register.html">➜ &nbsp; Book a Ride</a><a class="btn btn-outline" href="#how-it-works">Know More</a></div>
+        <div class="hero-trust"><span>🛡 <b>Verified Drivers</b></span><span>📍 <b>Live Tracking</b></span><span>💳 <b>Easy Payments</b></span></div>
+      </div>
+      <div class="hero-visual" aria-label="Illustrated scooter ride from pickup to drop">
+        <div class="sky-orb orb-one"></div><div class="sky-orb orb-two"></div>
+        <div class="cityline"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <svg class="route-art" viewBox="0 0 620 300" role="img" aria-label="Route from pickup to destination"><path class="route-dash" d="M45 72 C130 28 148 125 238 112 S352 40 420 92 S514 145 575 72"/><circle cx="45" cy="72" r="9" fill="#16a765"/><circle cx="575" cy="72" r="9" fill="#ef4444"/></svg>
+        <div class="map-pin pickup-pin"><span>●</span><b>Pickup</b><small>Home / Your location</small></div><div class="map-pin drop-pin"><span>●</span><b>Drop</b><small>Your destination</small></div>
+        <div class="rider-scene"><img src="ride-hero-art.png" alt="Cartoon scooter rider travelling along the road" /></div>
+        <div class="driver-float"><div class="driver-avatar">👨🏻</div><div><b>Your driver is on the way</b><small>Verified driver · Live route</small></div><span class="live-pill">LIVE</span></div>
+      </div>
+    </div>
+    <div class="hero-wave"></div>
+  </section>
+
+  <section class="container home-features">
+    <div class="feature-tile"><span class="feature-icon">🛡️</span><div><h3>Verified Drivers</h3><p>Background-checked drivers for your safety.</p></div></div>
+    <div class="feature-tile"><span class="feature-icon">📍</span><div><h3>Live Tracking</h3><p>Follow your ride in real time on the map.</p></div></div>
+    <div class="feature-tile"><span class="feature-icon">💳</span><div><h3>Multiple Payments</h3><p>Pay securely with available payment options.</p></div></div>
+    <div class="feature-tile"><span class="feature-icon">🎧</span><div><h3>24/7 Support</h3><p>Help whenever you need it.</p></div></div>
+  </section>
+
+  <section class="container how-section" id="how-it-works">
+    <div class="section-heading"><span class="section-pill">HOW IT WORKS</span><h2>Get a Ride in <span>3 Easy Steps</span></h2><p>Booking with Smart Ride is quick, simple and hassle-free.</p></div>
+    <div class="steps-grid"><article class="step-card"><span class="step-num">1</span><span class="step-icon">📍</span><h3>Set Pickup &amp; Drop</h3><p>Enter your pickup and drop location or choose from the map.</p></article><div class="step-arrow">➜</div><article class="step-card"><span class="step-num">2</span><span class="step-icon">🛵</span><h3>Find a Ride</h3><p>Our system matches you with the best available driver.</p></article><div class="step-arrow">➜</div><article class="step-card"><span class="step-num">3</span><span class="step-icon">✓</span><h3>Enjoy Your Ride</h3><p>Track your driver and reach your destination safely.</p></article></div>
+  </section>
+
+  <section class="container plan-section"><div class="section-heading"><span class="section-pill">RIDE YOUR WAY</span><h2>Simple Subscription <span>Plans</span></h2><p>Choose a plan that fits your daily commute.</p></div><div id="plans" class="grid grid-3"></div></section>
+  </main>
+  <footer class="site-footer">Smart Ride <span>•</span> Safe Ride · Smart Choice</footer>
+
+  <script src="js/api.js"></script>
+  <script>
+    renderNavbar(getAccount());
+
+    async function loadPlans() {
+      try {
+        const res = await fetch('/api/plans');
+        const data = await res.json();
+        const el = document.getElementById('plans');
+        el.innerHTML = data.plans.map((p, i) => `
+          <div class="card plan-card">
+            <div class="pass-top">
+              <div class="pass-eyebrow">LINE ${String(i + 1).padStart(2, '0')} · ${p.durationDays}-DAY PASS</div>
+              <h3>${p.name}</h3>
+              <div class="plan-price">${fmtMoney(p.price)} <span>/ ${p.durationDays} days</span></div>
+              <p>${p.description}</p>
+            </div>
+            <div class="pass-stub"><a class="btn btn-primary btn-block" href="register.html">Subscribe</a></div>
+          </div>
+        `).join('');
+      } catch (e) {
+        document.getElementById('plans').innerHTML = '<p>Could not load plans. Please make sure the backend server is running.</p>';
+      }
+    }
+    loadPlans();
+  </script>
+  <script src="js/theme-motion.js"></script>
+</body>
+</html>

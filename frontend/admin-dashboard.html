@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin Dashboard — Smart Ride</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+  <div class="container">
+    <h1 class="page-title">Admin Dashboard</h1>
+    <p class="page-sub">Monitor platform performance and manage users, drivers & subscriptions.</p>
+    <div class="grid grid-4" id="kpiCards" style="margin-bottom:28px;"></div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="subs">Subscriptions</button>
+      <button class="tab-btn" data-tab="payments">Payments</button>
+      <button class="tab-btn" data-tab="drivers">Drivers</button>
+      <button class="tab-btn" data-tab="users">Users</button>
+      <button class="tab-btn" data-tab="plans">Plans</button>
+      <button class="tab-btn" data-tab="complaints">Complaints</button>
+      <button class="tab-btn" data-tab="settings">Settings</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-subs">
+      <div class="section-header">
+        <div></div>
+        <div><label style="font-size:0.85rem;margin-right:6px;">Filter by city:</label><select id="subsCityFilter" style="width:auto;padding:6px;" onchange="loadSubs()"><option value="">All Cities</option></select></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>User</th><th>Plan</th><th>City</th><th>Route</th><th>Driver</th><th>Status</th><th>Valid Till</th><th>Reassign Driver</th></tr></thead>
+          <tbody id="subsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-payments">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>User</th><th>Plan</th><th>Amount</th><th>UTR / Ref No.</th><th>Payer UPI ID</th><th>Payer Name</th><th>Status</th><th>Submitted</th><th>Action</th></tr></thead>
+          <tbody id="paymentsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-drivers">
+      <div class="section-header">
+        <div></div>
+        <div><label style="font-size:0.85rem;margin-right:6px;">Filter by city:</label><select id="driversCityFilter" style="width:auto;padding:6px;" onchange="loadDrivers()"><option value="">All Cities</option></select></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Contact</th><th>City</th><th>Vehicle</th><th>License</th><th>Rating</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="driversBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-users">
+      <div class="table-wrap">
+        <table><thead><tr><th>Name</th><th>Contact</th><th>City</th><th>Default Route</th><th>Joined</th></tr></thead><tbody id="usersBody"></tbody></table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-plans">
+      <div class="grid grid-2">
+        <div class="card">
+          <h3 id="planFormTitle">Add New Plan</h3>
+          <div id="planAlert" class="alert hidden"></div>
+          <input type="hidden" id="planEditId" value="" />
+          <div class="form-group"><label for="planName">Plan Name</label><input type="text" id="planName" placeholder="e.g. Monthly Plan" /></div>
+          <div class="grid grid-2" style="gap:12px;">
+            <div class="form-group"><label for="planDuration">Duration (days)</label><input type="number" id="planDuration" min="1" /></div>
+            <div class="form-group"><label for="planPrice">Price (₹)</label><input type="number" id="planPrice" min="1" /></div>
+          </div>
+          <div class="form-group"><label for="planDescription">Description</label><textarea id="planDescription"></textarea></div>
+          <button class="btn btn-primary" id="savePlanBtn">Add Plan</button>
+          <button class="btn btn-outline hidden" id="cancelPlanEditBtn">Cancel Edit</button>
+        </div>
+        <div class="card"><h3>Existing Plans</h3><div id="plansList"></div></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-complaints">
+      <div class="table-wrap">
+        <table><thead><tr><th>Raised By</th><th>Role</th><th>Subject</th><th>Message</th><th>Status</th><th>Date</th><th>Action</th></tr></thead><tbody id="complaintsBody"></tbody></table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-settings">
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>UPI Payment Settings</h3>
+          <div id="settingsAlert" class="alert hidden"></div>
+          <div class="form-group"><label for="upiIdInput">Your UPI ID (VPA)</label><input type="text" id="upiIdInput" placeholder="yourname@okhdfcbank" /></div>
+          <div class="form-group"><label for="payeeNameInput">Payee Display Name</label><input type="text" id="payeeNameInput" placeholder="Smart Ride" /></div>
+          <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+          <p style="color:var(--muted);font-size:0.82rem;margin-top:14px;">Riders will see a QR code generated from this UPI ID and the exact plan amount, and pay you directly — Smart Ride never holds the funds.</p>
+        </div>
+        <div class="card" style="text-align:center;">
+          <h3>Preview</h3>
+          <div id="settingsQrHolder" style="display:inline-block;padding:14px;background:#fff;border:1px solid var(--border);border-radius:14px;min-width:180px;min-height:180px;"></div>
+          <p style="color:var(--muted);font-size:0.8rem;margin-top:10px;">Sample QR for ₹1 — scan it yourself to confirm it works.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    const account = requireRole('admin');
+    renderNavbar(account);
+    let verifiedDriversCache = [];
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    async function loadAnalytics() {
+      const data = await apiRequest('/admin/analytics');
+      const a = data.analytics;
+      document.getElementById('kpiCards').innerHTML = `
+        <div class="card kpi-card"><div class="kpi-value">${a.activeSubscriptions}</div><div class="kpi-label">Active Subscriptions</div></div>
+        <div class="card kpi-card"><div class="kpi-value">${fmtMoney(a.monthlyRecurringRevenue)}</div><div class="kpi-label">Monthly Recurring Revenue</div></div>
+        <div class="card kpi-card"><div class="kpi-value">${a.userRetentionRate}%</div><div class="kpi-label">User Retention Rate</div></div>
+        <div class="card kpi-card"><div class="kpi-value">${a.driverUtilizationRate}%</div><div class="kpi-label">Driver Utilization Rate</div></div>
+        <div class="card kpi-card"><div class="kpi-value">${a.totalUsers}</div><div class="kpi-label">Total Users</div></div>
+        <div class="card kpi-card"><div class="kpi-value">${a.verifiedDrivers}/${a.totalDrivers}</div><div class="kpi-label">Verified Drivers</div></div>
+        <div class="card kpi-card"><div class="kpi-value">${a.openComplaints}</div><div class="kpi-label">Open Complaints</div></div>
+        <div class="card kpi-card"><div class="kpi-value">${a.pendingPaymentVerifications}</div><div class="kpi-label">Payments Awaiting Verification</div></div>
+        <div class="card kpi-card"><div class="kpi-value">${fmtMoney(a.totalPaymentsCollected)}</div><div class="kpi-label">Total Payments Collected</div></div>
+      `;
+    }
+
+    function populateCityFilter(selectId, cities) {
+      const select = document.getElementById(selectId);
+      const current = select.value;
+      const unique = [...new Set(cities.filter(Boolean))].sort();
+      select.innerHTML = '<option value="">All Cities</option>' + unique.map(c => `<option value="${c}">${c}</option>`).join('');
+      if (unique.includes(current)) select.value = current;
+    }
+
+    async function loadSubs() {
+      const data = await apiRequest('/admin/subscriptions');
+      populateCityFilter('subsCityFilter', data.subscriptions.map(s => s.city));
+      const cityFilter = document.getElementById('subsCityFilter').value;
+      const filtered = cityFilter ? data.subscriptions.filter(s => s.city === cityFilter) : data.subscriptions;
+      const body = document.getElementById('subsBody');
+      if (filtered.length === 0) { body.innerHTML = `<tr><td colspan="8" class="empty-state">No subscriptions ${cityFilter ? 'in this city' : 'yet'}.</td></tr>`; return; }
+      body.innerHTML = filtered.map(s => `
+        <tr>
+          <td>${s.userName}</td><td>${s.planName}</td><td>${s.city || '—'}</td>
+          <td>${s.pickup} → ${s.drop}${s.pickupLat != null ? `<br><button class="btn btn-outline btn-sm" style="margin-top:4px;" onclick="openRouteMap(${s.pickupLat}, ${s.pickupLng}, ${s.dropLat}, ${s.dropLng}, '${(s.pickup || '').replace(/'/g, '')}', '${(s.drop || '').replace(/'/g, '')}')">View Route</button>` : ''}${s.driverName ? ` <button class="btn btn-outline btn-sm" style="margin-top:4px;" onclick="openChatModal('${s.id}', '${(s.userName || '').replace(/'/g, '')} ↔ ${(s.driverName || '').replace(/'/g, '')}', true, '/admin/chat')">View Chat</button>` : ''}</td>
+          <td>${s.driverName || '—'}</td><td>${statusBadge(s.status)}</td><td>${fmtDate(s.endDate)}</td>
+          <td>${s.status === 'active' ? `<button class="btn btn-primary btn-sm" style="margin-bottom:6px;" onclick="smartAssign('${s.id}')">Smart assign</button><br><select onchange="reassign('${s.id}', this.value)" style="width:auto;padding:6px;"><option value="">Manual assignment...</option>${verifiedDriversCache.map(d => `<option value="${d.id}" ${d.id === s.driverId ? 'selected' : ''}>${d.name} (${d.vehicleNumber || 'N/A'})</option>`).join('')}</select>` : '—'}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function smartAssign(subId) {
+      try {
+        const result = await apiRequest(`/admin/subscriptions/${subId}/driver-recommendations`);
+        const best = (result.recommendations || [])[0];
+        if (!best) { alert(result.reason || 'No suitable verified driver found. Check driver verification, city, capacity and route details.'); return; }
+        const details = (best.reasons || []).map(reason => `• ${reason}`).join('\n');
+        const ok = confirm(`Recommended driver: ${best.driverName} (${best.vehicleNumber || 'vehicle not added'})\nCity: ${best.city || 'not specified'}\n\n${details}\n\nAssign this driver?`);
+        if (!ok) return;
+        const assigned = await apiRequest(`/admin/subscriptions/${subId}/auto-assign-driver`, { method: 'POST' });
+        alert(`${assigned.message}\nDriver: ${assigned.driver.name}\n${(assigned.reasons || []).join('\n')}`);
+        await Promise.all([loadSubs(), loadAnalytics()]);
+      } catch (err) { alert(err.message); }
+    }
+
+    async function reassign(subId, driverId) {
+      if (!driverId) return;
+      try { await apiRequest(`/admin/subscriptions/${subId}/assign-driver`, { method: 'POST', body: { driverId } }); loadSubs(); loadAnalytics(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function loadDrivers() {
+      const data = await apiRequest('/admin/drivers');
+      verifiedDriversCache = data.drivers.filter(d => d.verified);
+      populateCityFilter('driversCityFilter', data.drivers.map(d => d.city));
+      const cityFilter = document.getElementById('driversCityFilter').value;
+      const filtered = cityFilter ? data.drivers.filter(d => d.city === cityFilter) : data.drivers;
+      const body = document.getElementById('driversBody');
+      if (filtered.length === 0) { body.innerHTML = `<tr><td colspan="8" class="empty-state">No drivers ${cityFilter ? 'in this city' : 'registered yet'}.</td></tr>`; return; }
+      body.innerHTML = filtered.map(d => `
+        <tr>
+          <td>${d.name}</td><td>${d.email}<br><span style="color:var(--muted);font-size:0.8rem;">${d.phone}</span></td>
+          <td>${d.city || '—'}</td><td>${d.vehicleType || '—'} ${d.vehicleNumber ? `(${d.vehicleNumber})` : ''}</td><td>${d.licenseNumber || '—'}</td>
+          <td>${d.avgRating != null ? `${d.avgRating} ★` : '<span style="color:var(--muted);">No ratings</span>'}</td>
+          <td>${d.verified ? '<span class="badge badge-success">Verified</span>' : '<span class="badge badge-warning">Pending</span>'}</td>
+          <td>${d.verified ? `<button class="btn btn-outline btn-sm" onclick="toggleVerify('${d.id}', false)">Revoke</button>` : `<button class="btn btn-success btn-sm" onclick="toggleVerify('${d.id}', true)">Verify</button>`}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function toggleVerify(driverId, verify) {
+      try { await apiRequest(`/admin/drivers/${driverId}/${verify ? 'verify' : 'unverify'}`, { method: 'POST' }); loadDrivers(); loadSubs(); loadAnalytics(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function loadUsers() {
+      const data = await apiRequest('/admin/users');
+      const body = document.getElementById('usersBody');
+      if (data.users.length === 0) { body.innerHTML = `<tr><td colspan="5" class="empty-state">No users registered yet.</td></tr>`; return; }
+      body.innerHTML = data.users.map(u => `<tr><td>${u.name}</td><td>${u.email}<br><span style="color:var(--muted);font-size:0.8rem;">${u.phone}</span></td><td>${u.city || '—'}</td><td>${u.pickup || '—'} → ${u.drop || '—'}</td><td>${fmtDate(u.createdAt)}</td></tr>`).join('');
+    }
+
+    async function loadPlans() {
+      const res = await fetch('/api/plans');
+      const data = await res.json();
+      const el = document.getElementById('plansList');
+      if (data.plans.length === 0) { el.innerHTML = `<div class="empty-state">No plans yet. Add one on the left.</div>`; return; }
+      el.innerHTML = data.plans.map(p => `
+        <div class="notif-item">
+          <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;">
+            <div><b>${p.name}</b> — ${fmtMoney(p.price)} <span style="color:var(--muted);">/ ${p.durationDays} days</span><div style="font-size:0.82rem;color:var(--muted);margin-top:4px;">${p.description || ''}</div></div>
+            <div style="display:flex;gap:6px;flex:none;"><button class="btn btn-outline btn-sm" onclick='startEditPlan(${JSON.stringify(p)})'>Edit</button><button class="btn btn-danger btn-sm" onclick="deletePlan('${p.id}')">Delete</button></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function startEditPlan(p) {
+      document.getElementById('planEditId').value = p.id;
+      document.getElementById('planName').value = p.name;
+      document.getElementById('planDuration').value = p.durationDays;
+      document.getElementById('planPrice').value = p.price;
+      document.getElementById('planDescription').value = p.description || '';
+      document.getElementById('planFormTitle').textContent = 'Edit Plan';
+      document.getElementById('savePlanBtn').textContent = 'Save Changes';
+      document.getElementById('cancelPlanEditBtn').classList.remove('hidden');
+      document.querySelector('.tab-btn[data-tab="plans"]').click();
+      document.getElementById('planName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function resetPlanForm() {
+      document.getElementById('planEditId').value = '';
+      document.getElementById('planName').value = '';
+      document.getElementById('planDuration').value = '';
+      document.getElementById('planPrice').value = '';
+      document.getElementById('planDescription').value = '';
+      document.getElementById('planFormTitle').textContent = 'Add New Plan';
+      document.getElementById('savePlanBtn').textContent = 'Add Plan';
+      document.getElementById('cancelPlanEditBtn').classList.add('hidden');
+    }
+
+    document.getElementById('cancelPlanEditBtn').addEventListener('click', resetPlanForm);
+
+    document.getElementById('savePlanBtn').addEventListener('click', async () => {
+      hideAlert('planAlert');
+      const editId = document.getElementById('planEditId').value;
+      const body = {
+        name: document.getElementById('planName').value.trim(),
+        durationDays: Number(document.getElementById('planDuration').value),
+        price: Number(document.getElementById('planPrice').value),
+        description: document.getElementById('planDescription').value.trim(),
+      };
+      if (!body.name || !body.durationDays || !body.price) return showAlert('planAlert', 'Please fill in name, duration and price.');
+      try {
+        if (editId) { await apiRequest(`/admin/plans/${editId}`, { method: 'PUT', body }); showAlert('planAlert', 'Plan updated.', 'success'); }
+        else { await apiRequest('/admin/plans', { method: 'POST', body }); showAlert('planAlert', 'Plan added.', 'success'); }
+        resetPlanForm();
+        loadPlans();
+      } catch (err) { showAlert('planAlert', err.message); }
+    });
+
+    async function deletePlan(id) {
+      if (!confirm('Delete this plan? This only works if no subscription references it.')) return;
+      try { await apiRequest(`/admin/plans/${id}`, { method: 'DELETE' }); loadPlans(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function loadComplaints() {
+      const data = await apiRequest('/admin/complaints');
+      const body = document.getElementById('complaintsBody');
+      if (data.complaints.length === 0) { body.innerHTML = `<tr><td colspan="7" class="empty-state">No complaints raised yet.</td></tr>`; return; }
+      body.innerHTML = data.complaints.map(c => `
+        <tr><td>${c.raiserName}</td><td>${c.raisedByRole}</td><td>${c.subject}</td><td>${c.message}</td><td>${statusBadge(c.status)}</td><td>${fmtDate(c.createdAt)}</td>
+        <td>${c.status !== 'resolved' ? `<button class="btn btn-success btn-sm" onclick="resolveComplaint('${c.id}')">Resolve</button>` : '—'}</td></tr>
+      `).join('');
+    }
+
+    async function resolveComplaint(id) {
+      try { await apiRequest(`/admin/complaints/${id}/resolve`, { method: 'POST' }); loadComplaints(); loadAnalytics(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function loadPayments() {
+      const data = await apiRequest('/admin/payments');
+      const body = document.getElementById('paymentsBody');
+      if (data.payments.length === 0) { body.innerHTML = `<tr><td colspan="9" class="empty-state">No payment submissions yet.</td></tr>`; return; }
+      body.innerHTML = data.payments.map(p => `
+        <tr>
+          <td>${p.userName}<br><span style="color:var(--muted);font-size:0.78rem;">${p.userPhone || ''}</span></td><td>${p.planName}</td><td>${fmtMoney(p.amount)}</td>
+          <td class="mono" style="font-size:0.8rem;">${p.utrNumber || '—'}</td><td class="mono" style="font-size:0.8rem;">${p.payerUpiId || '—'}</td><td>${p.payerName || '—'}</td>
+          <td>${statusBadge(p.status)}${p.status === 'rejected' && p.rejectionReason ? `<div style="font-size:0.72rem;color:var(--danger);margin-top:4px;">${p.rejectionReason}</div>` : ''}</td>
+          <td>${fmtDateTime(p.createdAt)}</td>
+          <td>${p.status === 'pending_verification' ? `<button class="btn btn-success btn-sm" onclick="verifyPayment('${p.id}')">Verify</button> <button class="btn btn-danger btn-sm" onclick="rejectPayment('${p.id}')">Reject</button>` : (p.invoiceNumber ? `<span class="mono" style="font-size:0.72rem;color:var(--muted);">${p.invoiceNumber}</span>` : '—')}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function verifyPayment(id) {
+      if (!confirm('Confirm you have received this payment in your UPI account?')) return;
+      try { await apiRequest(`/admin/payments/${id}/verify`, { method: 'POST' }); loadPayments(); loadSubs(); loadAnalytics(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function rejectPayment(id) {
+      const reason = prompt('Reason for rejecting this payment (shown to the rider):', 'Could not find this transaction in our account.');
+      if (reason === null) return;
+      try { await apiRequest(`/admin/payments/${id}/reject`, { method: 'POST', body: { reason } }); loadPayments(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function loadSettings() {
+      const data = await apiRequest('/settings/payment');
+      document.getElementById('upiIdInput').value = data.settings.upiId || '';
+      document.getElementById('payeeNameInput').value = data.settings.payeeName || 'Smart Ride';
+      renderSettingsPreview(data.settings);
+    }
+
+    function renderSettingsPreview(settings) {
+      const holder = document.getElementById('settingsQrHolder');
+      holder.innerHTML = '';
+      if (!settings.upiId) { holder.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">Enter a UPI ID and save to preview.</p>'; return; }
+      const link = `upi://pay?pa=${encodeURIComponent(settings.upiId)}&pn=${encodeURIComponent(settings.payeeName || 'Smart Ride')}&am=1.00&cu=INR&tn=Preview`;
+      if (window.QRCode) new QRCode(holder, { text: link, width: 170, height: 170 });
+      else holder.innerHTML = `<div style="font-family:var(--font-mono);font-size:0.68rem;word-break:break-all;">${link}</div>`;
+    }
+
+    document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+      hideAlert('settingsAlert');
+      const upiId = document.getElementById('upiIdInput').value.trim();
+      const payeeName = document.getElementById('payeeNameInput').value.trim();
+      try {
+        const data = await apiRequest('/settings/payment', { method: 'PUT', body: { upiId, payeeName } });
+        showAlert('settingsAlert', 'Settings saved.', 'success');
+        renderSettingsPreview(data.settings);
+      } catch (err) { showAlert('settingsAlert', err.message); }
+    });
+
+    async function loadAll() {
+      await loadDrivers();
+      loadAnalytics();
+      loadSubs();
+      loadUsers();
+      loadComplaints();
+      loadPayments();
+      loadSettings();
+      loadPlans();
+    }
+    loadAll();
+  </script>
+  <script src="js/theme-motion.js"></script>
+</body>
+</html>
