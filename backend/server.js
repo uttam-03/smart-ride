@@ -96,7 +96,7 @@ async function start() {
   await seedDatabase();
   startReminderScheduler();
 
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log('==========================================================');
     console.log(' Smart Ride - Monthly Pickup & Drop Subscription Platform');
     console.log('==========================================================');
